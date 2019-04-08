@@ -79,7 +79,7 @@ Iterator* MemTable::NewIterator() {
   return new MemTableIterator(&table_);
 }
 /*
-把key和valume组成一条记录，然后插入到skiplist（table）中
+把key和value组成一条记录，然后插入到skiplist（table）中
 记录格式：
     key Size (len) | User key (string) | sequence number (7 bytes) | value type |value_size |alue bytes
 */
