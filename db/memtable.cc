@@ -78,7 +78,11 @@ class MemTableIterator: public Iterator {
 Iterator* MemTable::NewIterator() {
   return new MemTableIterator(&table_);
 }
-
+/*
+把key和valume组成一条记录，然后插入到skiplist（table）中
+记录格式：
+    key Size (len) | User key (string) | sequence number (7 bytes) | value type |value_size |alue bytes
+*/
 void MemTable::Add(SequenceNumber s, ValueType type,
                    const Slice& key,
                    const Slice& value) {
@@ -105,11 +109,16 @@ void MemTable::Add(SequenceNumber s, ValueType type,
   table_.Insert(buf);
 }
 
+/*
+LookupKey: Size (int32变长)| User key (string) | sequence number (7 bytes) | value type
+memkey:Size (len) | User key (string) | sequence number (7 bytes) | value type
+*/
 bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
+  //获取到memkey
   Slice memkey = key.memtable_key();
   Table::Iterator iter(&table_);
   iter.Seek(memkey.data());
-  if (iter.Valid()) {
+  if (iter.Valid()) { //查找到了元素
     // entry format is:
     //    klength  varint32
     //    userkey  char[klength]
