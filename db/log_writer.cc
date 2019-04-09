@@ -1,7 +1,10 @@
 // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
-
+/*
+  2019-4-8:
+  日志类型分为4种，kFullType，kFirstType，kLastType，kMiddleType
+*/
 #include "db/log_writer.h"
 
 #include <stdint.h>
@@ -17,7 +20,7 @@ Writer::Writer(WritableFile* dest)
       block_offset_(0) {
   for (int i = 0; i <= kMaxRecordType; i++) {
     char t = static_cast<char>(i);
-    type_crc_[i] = crc32c::Value(&t, 1);
+    type_crc_[i] = crc32c::Value(&t, 1);//为什么这里要取crc32值
   }
 }
 
@@ -39,6 +42,7 @@ Status Writer::AddRecord(const Slice& slice) {
     if (leftover < kHeaderSize) {
       // Switch to a new block
       if (leftover > 0) {
+        //一个block剩余空间小于7，则使用0填充，
         // Fill the trailer (literal below relies on kHeaderSize being 7)
         assert(kHeaderSize == 7);
         dest_->Append(Slice("\x00\x00\x00\x00\x00\x00", leftover));
@@ -49,8 +53,8 @@ Status Writer::AddRecord(const Slice& slice) {
     // Invariant: we never leave < kHeaderSize bytes in a block.
     assert(kBlockSize - block_offset_ - kHeaderSize >= 0);
 
-    const size_t avail = kBlockSize - block_offset_ - kHeaderSize;
-    const size_t fragment_length = (left < avail) ? left : avail;
+    const size_t avail = kBlockSize - block_offset_ - kHeaderSize;//当前block剩余空间
+    const size_t fragment_length = (left < avail) ? left : avail; //当前分片长度
 
     RecordType type;
     const bool end = (left == fragment_length);
@@ -72,19 +76,21 @@ Status Writer::AddRecord(const Slice& slice) {
   return s;
 }
 
+//写入记录
 Status Writer::EmitPhysicalRecord(RecordType t, const char* ptr, size_t n) {
   assert(n <= 0xffff);  // Must fit in two bytes
   assert(block_offset_ + kHeaderSize + n <= kBlockSize);
 
-  // Format the header
+  // Format the header,小端模式存放数据
   char buf[kHeaderSize];
-  buf[4] = static_cast<char>(n & 0xff);
-  buf[5] = static_cast<char>(n >> 8);
+  buf[4] = static_cast<char>(n & 0xff); //低字节
+  buf[5] = static_cast<char>(n >> 8);  //高字节
   buf[6] = static_cast<char>(t);
 
   // Compute the crc of the record type and the payload.
   uint32_t crc = crc32c::Extend(type_crc_[t], ptr, n);
   crc = crc32c::Mask(crc);                 // Adjust for storage
+//前4个字节时crc32校验
   EncodeFixed32(buf, crc);
 
   // Write the header and the payload
