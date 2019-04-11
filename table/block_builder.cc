@@ -79,6 +79,7 @@ void BlockBuilder::Add(const Slice& key, const Slice& value) {
   size_t shared = 0;
   if (counter_ < options_->block_restart_interval) {
     // See how much sharing to do with previous string
+    //压缩key
     const size_t min_length = std::min(last_key_piece.size(), key.size());
     while ((shared < min_length) && (last_key_piece[shared] == key[shared])) {
       shared++;
@@ -96,7 +97,8 @@ void BlockBuilder::Add(const Slice& key, const Slice& value) {
   PutVarint32(&buffer_, value.size());
 
   // Add string delta to buffer_ followed by value
-  buffer_.append(key.data() + shared, non_shared);
+  //前缀之后的字符串 + value 
+  buffer_.append(key.data() + shared, non_shared); //key剩余大小
   buffer_.append(value.data(), value.size());
 
   // Update state

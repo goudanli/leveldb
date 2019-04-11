@@ -93,6 +93,7 @@ void MemTable::Add(SequenceNumber s, ValueType type,
   //  value bytes  : char[value.size()]
   size_t key_size = key.size();
   size_t val_size = value.size();
+  //最前面key size 包含 user_key_size + 8,后面get方法中取user_key时有减8操作
   size_t internal_key_size = key_size + 8;
   const size_t encoded_len =
       VarintLength(internal_key_size) + internal_key_size +
@@ -130,6 +131,7 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
     // all entries with overly large sequence numbers.
     const char* entry = iter.key();
     uint32_t key_length;
+    //获取entry中user key的偏移，如上注释
     const char* key_ptr = GetVarint32Ptr(entry, entry+5, &key_length);
     if (comparator_.comparator.user_comparator()->Compare(
             Slice(key_ptr, key_length - 8),

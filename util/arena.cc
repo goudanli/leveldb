@@ -4,7 +4,9 @@
 
 #include "util/arena.h"
 #include <assert.h>
-
+/*
+    简单的内存管理模块（内存池）
+*/
 namespace leveldb {
 
 static const int kBlockSize = 4096;

@@ -9,7 +9,9 @@
 
 #include <stdint.h>
 #include "leveldb/slice.h"
-
+/*
+构造Block
+*/
 namespace leveldb {
 
 struct Options;
@@ -45,7 +47,7 @@ class BlockBuilder {
   std::vector<uint32_t> restarts_;    // Restart points
   int                   counter_;     // Number of entries emitted since restart
   bool                  finished_;    // Has Finish() been called?
-  std::string           last_key_;
+  std::string           last_key_;    //最后添加的key
 
   // No copying allowed
   BlockBuilder(const BlockBuilder&);

@@ -14,6 +14,7 @@
 
 namespace leveldb {
 
+//重启点个数
 inline uint32_t Block::NumRestarts() const {
   assert(size_ >= 2*sizeof(uint32_t));
   return DecodeFixed32(data_ + size_ - sizeof(uint32_t));
@@ -222,6 +223,7 @@ class Block::Iter : public Iterator {
   }
 
   bool ParseNextKey() {
+    //跳到该Block中的下一条记录
     current_ = NextEntryOffset();
     const char* p = data_ + current_;
     const char* limit = data_ + restarts_;  // Restarts come right after data
@@ -234,16 +236,17 @@ class Block::Iter : public Iterator {
 
     // Decode next entry
     uint32_t shared, non_shared, value_length;
+    //解析出key的前缀长度、key前缀之后的字符串长度和value的长度
     p = DecodeEntry(p, limit, &shared, &non_shared, &value_length);
     if (p == NULL || key_.size() < shared) {
       CorruptionError();
       return false;
-    } else {
+    } else {//成功
       key_.resize(shared);
       key_.append(p, non_shared);
       value_ = Slice(p + non_shared, value_length);
       while (restart_index_ + 1 < num_restarts_ &&
-             GetRestartPoint(restart_index_ + 1) < current_) {
+             GetRestartPoint(restart_index_ + 1) < current_) {   //从data中读取指定restart index的偏移值restart[index]
         ++restart_index_;
       }
       return true;
