@@ -83,7 +83,7 @@ class Block::Iter : public Iterator {
   uint32_t current_;
   uint32_t restart_index_;  // Index of restart block in which current_ falls
   std::string key_;
-  Slice value_;
+  Slice value_;            //当前记录
   Status status_;
 
   inline int Compare(const Slice& a, const Slice& b) const {
