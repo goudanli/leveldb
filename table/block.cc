@@ -164,6 +164,7 @@ class Block::Iter : public Iterator {
   virtual void Seek(const Slice& target) {
     // Binary search in restart array to find the first restart point
     // with a key >= target
+    //找到key < target的最后一个重启点
     uint32_t left = 0;
     uint32_t right = num_restarts_ - 1;
     while (left < right) {
@@ -226,7 +227,7 @@ class Block::Iter : public Iterator {
     //跳到该Block中的下一条记录
     current_ = NextEntryOffset();
     const char* p = data_ + current_;
-    const char* limit = data_ + restarts_;  // Restarts come right after data
+    const char* limit = data_ + restarts_;  // Restarts come right after data,重启点偏移地址
     if (p >= limit) {
       // No more entries to return.  Mark as invalid.
       current_ = restarts_;

@@ -18,14 +18,14 @@ namespace leveldb {
 
 struct TableBuilder::Rep {
   Options options;
-  Options index_block_options;
-  WritableFile* file;
-  uint64_t offset;
-  Status status;
-  BlockBuilder data_block;
-  BlockBuilder index_block;
-  std::string last_key;
-  int64_t num_entries;
+  Options index_block_options;  //index block 的选项
+  WritableFile* file;  // sstable文件
+  uint64_t offset;    //要写入data block在sstable文件中的偏移，初始0
+  Status status;    //当前状态-初始ok
+  BlockBuilder data_block;  //当前操作的data block
+  BlockBuilder index_block;  // sstable的index block
+  std::string last_key;     ////当前data block最后的k/v对的key
+  int64_t num_entries;     //当前data block的个数，初始0
   bool closed;          // Either Finish() or Abandon() has been called.
 
   // We do not emit the index entry for a block until we have seen the
@@ -40,7 +40,7 @@ struct TableBuilder::Rep {
   bool pending_index_entry;
   BlockHandle pending_handle;  // Handle to add to index block
 
-  std::string compressed_output;
+  std::string compressed_output;//压缩后的data block，临时存储，写入后即被清空
 
   Rep(const Options& opt, WritableFile* f)
       : options(opt),
