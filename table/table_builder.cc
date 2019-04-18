@@ -22,9 +22,9 @@ struct TableBuilder::Rep {
   WritableFile* file;
   uint64_t offset;
   Status status;
-  BlockBuilder data_block;
-  BlockBuilder index_block;
-  std::string last_key;
+  BlockBuilder data_block; // Data Block
+  BlockBuilder index_block;// Data Block 的索引
+  std::string last_key;   
   int64_t num_entries;
   bool closed;          // Either Finish() or Abandon() has been called.
 
@@ -85,15 +85,17 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
   Rep* r = rep_;
   assert(!r->closed);
   if (!ok()) return;
+  //保证当前加入的key在该Data Block中是最大的
   if (r->num_entries > 0) {
     assert(r->options.comparator->Compare(key, Slice(r->last_key)) > 0);
   }
-
+  //在开始下一个datablock时，Leveldb才将上一个data block加入到index block中
   if (r->pending_index_entry) {
     assert(r->data_block.empty());
     r->options.comparator->FindShortestSeparator(&r->last_key, key);
     std::string handle_encoding;
     r->pending_handle.EncodeTo(&handle_encoding);
+    //写入索引，这个索引在最后写入sstable
     r->index_block.Add(r->last_key, Slice(handle_encoding));
     r->pending_index_entry = false;
   }
@@ -114,7 +116,9 @@ void TableBuilder::Flush() {
   if (!ok()) return;
   if (r->data_block.empty()) return;
   assert(!r->pending_index_entry);
+  //写入Data Block,设置index entry信息->BlockHandle对象
   WriteBlock(&r->data_block, &r->pending_handle);
+  //写入成功，则Flush文件，并设置r->pending_index_entry为true
   if (ok()) {
     r->pending_index_entry = true;
     r->status = r->file->Flush();
@@ -128,7 +132,7 @@ void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
   //    crc: uint32
   assert(ok());
   Rep* r = rep_;
-  Slice raw = block->Finish();
+  Slice raw = block->Finish();//获得data block的序列化字符串
 
   Slice block_contents;
   CompressionType type = r->options.compression;
@@ -152,7 +156,8 @@ void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
       break;
     }
   }
-  handle->set_offset(r->offset);
+  //将data内容写入到文件，并重置block成初始化状态，清空compressed_output
+  handle->set_offset(r->offset);  //为index设置data block的handle信息
   handle->set_size(block_contents.size());
   r->status = r->file->Append(block_contents);
   if (r->status.ok()) {
@@ -162,7 +167,7 @@ void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
     crc = crc32c::Extend(crc, trailer, 1);  // Extend crc to cover block type
     EncodeFixed32(trailer+1, crc32c::Mask(crc));
     r->status = r->file->Append(Slice(trailer, kBlockTrailerSize));
-    if (r->status.ok()) {
+    if (r->status.ok()) {//写入成功更新offset:下一个data block的写入偏移
       r->offset += block_contents.size() + kBlockTrailerSize;
     }
   }
@@ -174,13 +179,15 @@ Status TableBuilder::status() const {
   return rep_->status;
 }
 
+//调用Finish函数，表明调用者将所有已经添加的k/v对持久化到sstable，并关闭sstable文件
 Status TableBuilder::Finish() {
   Rep* r = rep_;
-  Flush();
+  Flush();//首先调用Flush，写入最后的一块data block，然后设置关闭标志closed=true。表明该sstable已经关闭，不能再添加k/v对
   assert(!r->closed);
   r->closed = true;
   BlockHandle metaindex_block_handle;
   BlockHandle index_block_handle;
+  //写入meta index block到文件中
   if (ok()) {
     BlockBuilder meta_index_block(&r->options);
     // TODO(postrelease): Add stats and other meta blocks
@@ -194,8 +201,10 @@ Status TableBuilder::Finish() {
       r->index_block.Add(r->last_key, Slice(handle_encoding));
       r->pending_index_entry = false;
     }
+    //把索引写入sstable
     WriteBlock(&r->index_block, &index_block_handle);
   }
+  //写入Footer
   if (ok()) {
     Footer footer;
     footer.set_metaindex_handle(metaindex_block_handle);

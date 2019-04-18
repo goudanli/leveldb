@@ -31,12 +31,15 @@ Status Table::Open(const Options& options,
                    RandomAccessFile* file,
                    uint64_t size,
                    Table** table) {
+  //从文件的结尾读取Footer，并Decode到Footer对象中，如果文件长度小于Footer的长度，则报错。
+  //Footer的decode很简单，就是根据前面的Footer结构，解析并判断magic number是否正确，解析出meta index和index block的偏移和长度
+
   *table = NULL;
   if (size < Footer::kEncodedLength) {
     return Status::InvalidArgument("file is too short to be an sstable");
   }
 
-  char footer_space[Footer::kEncodedLength];
+  char footer_space[Footer::kEncodedLength];// Footer大小是固定的
   Slice footer_input;
   Status s = file->Read(size - Footer::kEncodedLength, Footer::kEncodedLength,
                         &footer_input, footer_space);
