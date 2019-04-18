@@ -3,3 +3,6 @@ build_config.mk
 *.o
 *_test
 db_bench
+.vscode/
+
+
