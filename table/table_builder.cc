@@ -128,7 +128,7 @@ void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
   //    crc: uint32
   assert(ok());
   Rep* r = rep_;
-  Slice raw = block->Finish();
+  Slice raw = block->Finish(); //获取序列化字符串
 
   Slice block_contents;
   CompressionType type = r->options.compression;
