@@ -2,4 +2,8 @@
 
 - table.c实现了sstable的打开，数据的读取
 
+block_builder.cc 主要实现了Block data的构建过程，Block data内部有很多k，v数据对
+block.cc  主要实现了Block data的内部遍历
+
+
 
