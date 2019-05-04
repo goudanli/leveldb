@@ -147,7 +147,7 @@ Iterator* Table::BlockReader(void* arg,
 
 Iterator* Table::NewIterator(const ReadOptions& options) const {
   return NewTwoLevelIterator(
-      rep_->index_block->NewIterator(rep_->options.comparator),
+      rep_->index_block->NewIterator(rep_->options.comparator), //data block 内部遍历器
       &Table::BlockReader, const_cast<Table*>(this), options);
 }
 
