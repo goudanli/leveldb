@@ -94,21 +94,21 @@ void TwoLevelIterator::Seek(const Slice& target) {
   if (data_iter_.iter() != NULL) data_iter_.Seek(target);
   SkipEmptyDataBlocksForward();
 }
-
+//seek to first Data Block
 void TwoLevelIterator::SeekToFirst() {
   index_iter_.SeekToFirst();
   InitDataBlock();
   if (data_iter_.iter() != NULL) data_iter_.SeekToFirst();
   SkipEmptyDataBlocksForward();
 }
-
+//seek to last Data Block
 void TwoLevelIterator::SeekToLast() {
   index_iter_.SeekToLast();
   InitDataBlock();
   if (data_iter_.iter() != NULL) data_iter_.SeekToLast();
   SkipEmptyDataBlocksBackward();
 }
-
+//data block下一条记录
 void TwoLevelIterator::Next() {
   assert(Valid());
   data_iter_.Next();
