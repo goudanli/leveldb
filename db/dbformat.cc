@@ -9,6 +9,7 @@
 
 namespace leveldb {
 
+//打包seqquence num 和 type
 static uint64_t PackSequenceAndType(uint64_t seq, ValueType t) {
   assert(seq <= kMaxSequenceNumber);
   assert(t <= kValueTypeForSeek);
@@ -98,6 +99,9 @@ void InternalKeyComparator::FindShortSuccessor(std::string* key) const {
   }
 }
 
+/*
+LookupKey: size（user_key size + 8） | user key | SequenceNumber（7字节） | type(1字节) |
+*/
 LookupKey::LookupKey(const Slice& user_key, SequenceNumber s) {
   size_t usize = user_key.size();
   size_t needed = usize + 13;  // A conservative estimate

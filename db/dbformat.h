@@ -158,6 +158,7 @@ inline int InternalKeyComparator::Compare(
   return Compare(a.Encode(), b.Encode());
 }
 
+//解析internal key
 inline bool ParseInternalKey(const Slice& internal_key,
                              ParsedInternalKey* result) {
   const size_t n = internal_key.size();
@@ -183,6 +184,7 @@ class LookupKey {
   Slice memtable_key() const { return Slice(start_, end_ - start_); }
 
   // Return an internal key (suitable for passing to an internal iterator)
+  //internal key = user key + 8(sequence num + type)
   Slice internal_key() const { return Slice(kstart_, end_ - kstart_); }
 
   // Return the user key
