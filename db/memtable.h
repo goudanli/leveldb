@@ -78,7 +78,7 @@ class MemTable {
 
   KeyComparator comparator_;
   int refs_;
-  Arena arena_;
+  Arena arena_;  //内存池模块
   Table table_;
 
   // No copying allowed

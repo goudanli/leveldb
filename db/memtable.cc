@@ -132,6 +132,7 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
     const char* entry = iter.key();
     uint32_t key_length;
     //获取entry中user key的偏移，如上注释
+    //key_ptr 指向 entry中user key的偏移
     const char* key_ptr = GetVarint32Ptr(entry, entry+5, &key_length);
     if (comparator_.comparator.user_comparator()->Compare(
             Slice(key_ptr, key_length - 8),
@@ -140,6 +141,7 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
       const uint64_t tag = DecodeFixed64(key_ptr + key_length - 8);
       switch (static_cast<ValueType>(tag & 0xff)) {
         case kTypeValue: {
+          //tag后面就是vlength，根据vlength，获取value
           Slice v = GetLengthPrefixedSlice(key_ptr + key_length);
           value->assign(v.data(), v.size());
           return true;
