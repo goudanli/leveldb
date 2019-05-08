@@ -20,7 +20,7 @@ Writer::Writer(WritableFile* dest)
       block_offset_(0) {
   for (int i = 0; i <= kMaxRecordType; i++) {
     char t = static_cast<char>(i);
-    type_crc_[i] = crc32c::Value(&t, 1);//为什么这里要取crc32值
+    type_crc_[i] = crc32c::Value(&t, 1);//事先计算type的crc32的值
   }
 }
 
