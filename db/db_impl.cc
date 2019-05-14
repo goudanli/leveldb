@@ -432,7 +432,7 @@ Status DBImpl::RecoverLogFile(uint64_t log_number,
   delete file;
   return status;
 }
-
+//写memtable 到sst level0文件中
 Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
                                 Version* base) {
   mutex_.AssertHeld();
@@ -440,7 +440,7 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
   FileMetaData meta;
   meta.number = versions_->NewFileNumber();
   pending_outputs_.insert(meta.number);
-  Iterator* iter = mem->NewIterator();
+  Iterator* iter = mem->NewIterator();//拿到memtable的遍历器
   Log(options_.info_log, "Level-0 table #%llu: started",
       (unsigned long long) meta.number);
 
@@ -468,6 +468,7 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
     if (base != NULL) {
       level = base->PickLevelForMemTableOutput(min_user_key, max_user_key);
     }
+    //versionEdit中添加新增sst文件的元数据信息，包括文件变号，文件大小，文件中最大和最小key
     edit->AddFile(level, meta.number, meta.file_size,
                   meta.smallest, meta.largest);
   }
@@ -479,6 +480,7 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
   return s;
 }
 
+//dump mentable到sst文件中
 Status DBImpl::CompactMemTable() {
   mutex_.AssertHeld();
   assert(imm_ != NULL);
@@ -498,6 +500,7 @@ Status DBImpl::CompactMemTable() {
   if (s.ok()) {
     edit.SetPrevLogNumber(0);
     edit.SetLogNumber(logfile_number_);  // Earlier logs no longer needed
+    //LogAndApply函数将根据前面记录的版本修改信息更新当前版本，得到一个新的版本信息。同时把这个新的版本信息设置成当前VersionSet的current_，并连入版本集合的链表中
     s = versions_->LogAndApply(&edit, &mutex_);
   }
 
@@ -646,6 +649,7 @@ void DBImpl::BackgroundCompaction() {
   if (c == NULL) {
     // Nothing to do
   } else if (!is_manual && c->IsTrivialMove()) {
+    //level+1中没有文件和level中的那个待compaction的文件的key范围重合时，此时直接将level中的那个文件移动到level+1中的那个文件即可
     // Move file to next level
     assert(c->num_input_files(0) == 1);
     FileMetaData* f = c->input(0, 0);
@@ -800,6 +804,7 @@ Status DBImpl::InstallCompactionResults(CompactionState* compact) {
       static_cast<long long>(compact->total_bytes));
 
   // Add compaction outputs
+  //inputs_中的文件信息加入到VersionEdit的deleted_files中，而将outputs中的文件信息加入到它的new_files_中
   compact->compaction->AddInputDeletions(compact->compaction->edit());
   const int level = compact->compaction->level();
   for (size_t i = 0; i < compact->outputs.size(); i++) {
