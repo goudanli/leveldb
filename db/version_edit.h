@@ -15,7 +15,7 @@ namespace leveldb {
 class VersionSet;
 
 struct FileMetaData {
-  int refs;
+  int refs;                   //引用计数,记录了被不同version引用的个数
   int allowed_seeks;          // Seeks allowed until compaction
   uint64_t number;
   uint64_t file_size;         // File size in bytes
@@ -87,7 +87,7 @@ class VersionEdit {
   typedef std::set< std::pair<int, uint64_t> > DeletedFileSet;
 
   std::string comparator_;
-  uint64_t log_number_;
+  uint64_t log_number_;  //日志文件编号
   uint64_t prev_log_number_;
   uint64_t next_file_number_;
   SequenceNumber last_sequence_;
@@ -98,8 +98,9 @@ class VersionEdit {
   bool has_last_sequence_;
 
   std::vector< std::pair<int, InternalKey> > compact_pointers_;
-  DeletedFileSet deleted_files_;
-  std::vector< std::pair<int, FileMetaData> > new_files_; //本次修改新增的文件
+  DeletedFileSet deleted_files_;  //包含当前版本在此次修改中被删除的文件
+  std::vector< std::pair<int, FileMetaData> > new_files_;   //此次修改中被新增的文件
+
 };
 
 }  // namespace leveldb

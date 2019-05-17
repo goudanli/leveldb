@@ -55,6 +55,8 @@ extern bool SomeFileOverlapsRange(
     const Slice* smallest_user_key,
     const Slice* largest_user_key);
 
+
+//每次sst文件信息的改变都会生成新的Version,sst文件信息改变(memtable写盘)
 class Version {
  public:
   // Append to *iters a sequence of iterators that will
@@ -119,7 +121,7 @@ class Version {
   int refs_;                    // Number of live refs to this version
 
   // List of files per level
-  std::vector<FileMetaData*> files_[config::kNumLevels];
+  std::vector<FileMetaData*> files_[config::kNumLevels];//记录了所有层的sst文件元数据
 
   // Next file to compact based on seek stats.
   FileMetaData* file_to_compact_;
@@ -128,8 +130,8 @@ class Version {
   // Level that should be compacted next and its compaction score.
   // Score < 1 means compaction is not strictly needed.  These fields
   // are initialized by Finalize().
-  double compaction_score_;
-  int compaction_level_;
+  double compaction_score_;  //Compaction的紧迫程度
+  int compaction_level_;    //记录当前version需要进行Compaction的Level
 
   explicit Version(VersionSet* vset)
       : vset_(vset), next_(this), prev_(this), refs_(0),
@@ -285,7 +287,7 @@ class VersionSet {
 
   // Per-level key at which the next compaction at that level should start.
   // Either an empty string, or a valid InternalKey.
-  std::string compact_pointer_[config::kNumLevels];
+  std::string compact_pointer_[config::kNumLevels]; //主要是标记每个level下次进行compaction时应该选择那个key
 
   // No copying allowed
   VersionSet(const VersionSet&);
@@ -346,6 +348,7 @@ class Compaction {
   VersionEdit edit_;
 
   // Each compaction reads inputs from "level_" and "level_+1"
+  //包含了本次compaction操作所需要的所有sstable文件信息
   std::vector<FileMetaData*> inputs_[2];      // The two sets of inputs
 
   // State used to check for number of of overlapping grandparent files
