@@ -529,7 +529,7 @@ class VersionSet::Builder {
     }
   };
 
-  typedef std::set<FileMetaData*, BySmallestKey> FileSet;
+  typedef std::set<FileMetaData*, BySmallestKey> FileSet; //set的高阶用法
   struct LevelState {
     std::set<uint64_t> deleted_files;
     FileSet* added_files;
@@ -538,7 +538,20 @@ class VersionSet::Builder {
   VersionSet* vset_;
   Version* base_;
   LevelState levels_[config::kNumLevels];
+/*
+c++ 11
+bool comp(FileMetaData* f1, FileMetaData* f2) const {
+        int r = vset_->icmp_->Compare(f1->smallest, f2->smallest);
+        if (r != 0) {
+           return (r < 0);
+        } else {
+           // Break ties by file number
+           return (f1->number < f2->number);
+        }
+}
+std::set<FileMetaData*,decltype(&comp)> FileSet(&comp)
 
+*/
  public:
   // Initialize a builder with the files from *base and other info from *vset
   Builder(VersionSet* vset, Version* base)
@@ -548,7 +561,7 @@ class VersionSet::Builder {
     BySmallestKey cmp;
     cmp.internal_comparator = &vset_->icmp_;
     for (int level = 0; level < config::kNumLevels; level++) {
-      levels_[level].added_files = new FileSet(cmp);
+      levels_[level].added_files = new FileSet(cmp);   //初始化比较器，new FileSet数据结构
     }
   }
 
@@ -574,6 +587,7 @@ class VersionSet::Builder {
   }
 
   // Apply all of the edits in *edit to the current state.
+  //合并所有的edit
   void Apply(VersionEdit* edit) {
     // Update compaction pointers
     for (size_t i = 0; i < edit->compact_pointers_.size(); i++) {
@@ -589,7 +603,7 @@ class VersionSet::Builder {
          ++iter) {
       const int level = iter->first;
       const uint64_t number = iter->second;
-      levels_[level].deleted_files.insert(number);
+      levels_[level].deleted_files.insert(number); //合并edit中的deleted_files
     }
 
     // Add new files
@@ -620,6 +634,7 @@ class VersionSet::Builder {
   }
 
   // Save the current state in *v.
+  //从Builder中导出Version
   void SaveTo(Version* v) {
     BySmallestKey cmp;
     cmp.internal_comparator = &vset_->icmp_;
@@ -667,7 +682,9 @@ class VersionSet::Builder {
 #endif
     }
   }
-
+  // 这个函数主要就是做：
+  // 看一下f是否是在要删除的列表里面
+  // 如果不在，那么添加到version v相应的level的文件列表中
   void MaybeAddFile(Version* v, int level, FileMetaData* f) {
     if (levels_[level].deleted_files.count(f->number) > 0) {
       // File is deleted: do nothing
