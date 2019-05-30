@@ -592,6 +592,12 @@ std::set<FileMetaData*,decltype(&comp)> FileSet(&comp)
     // Update compaction pointers
     for (size_t i = 0; i < edit->compact_pointers_.size(); i++) {
       const int level = edit->compact_pointers_[i].first;
+      // version_set_里面的compact_pointers_定义是不一样的
+      // std::string compact_pointer_[config::kNumLevels];
+      // 所以这里直接使用level作为索引
+      // 由于是版本的apply，那么总归是后面的一个versionEdit去覆盖前面的
+      // version edit的内容。
+      // 所以这里直接采用赋值
       vset_->compact_pointer_[level] =
           edit->compact_pointers_[i].second.Encode().ToString();
     }
@@ -634,7 +640,7 @@ std::set<FileMetaData*,decltype(&comp)> FileSet(&comp)
   }
 
   // Save the current state in *v.
-  //从Builder中导出Version
+  //从Builder中导出Version,把累加的结果保存到v中
   void SaveTo(Version* v) {
     BySmallestKey cmp;
     cmp.internal_comparator = &vset_->icmp_;
@@ -729,6 +735,7 @@ VersionSet::~VersionSet() {
   delete descriptor_file_;
 }
 
+//versionset列表中添加v
 void VersionSet::AppendVersion(Version* v) {
   // Make "v" current
   assert(v->refs_ == 0);

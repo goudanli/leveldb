@@ -1115,7 +1115,9 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
   w.done = false;
 
   MutexLock l(&mutex_);
+  //writers_ 写队列
   writers_.push_back(&w);
+  //发现如果有其他写入，则等待
   while (!w.done && &w != writers_.front()) {
     w.cv.Wait();
   }
@@ -1124,6 +1126,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
   }
 
   // May temporarily unlock and wait.
+  //为即将写入提供空间
   Status status = MakeRoomForWrite(my_batch == NULL);
   uint64_t last_sequence = versions_->LastSequence();
   Writer* last_writer = &w;
@@ -1138,11 +1141,13 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
     // into mem_.
     {
       mutex_.Unlock();
+      //写日志
       status = log_->AddRecord(WriteBatchInternal::Contents(updates));
       if (status.ok() && options.sync) {
         status = logfile_->Sync();
       }
       if (status.ok()) {
+          //插入memtable
         status = WriteBatchInternal::InsertInto(updates, mem_);
       }
       mutex_.Lock();
@@ -1262,7 +1267,7 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       assert(versions_->PrevLogNumber() == 0);
       uint64_t new_log_number = versions_->NewFileNumber();
       WritableFile* lfile = NULL;
-      s = env_->NewWritableFile(LogFileName(dbname_, new_log_number), &lfile);
+      s = env_->NewWritableFile(LogFileName(dbname_, new_log_number), &lfile);//新的日志文件
       if (!s.ok()) {
         break;
       }
@@ -1273,7 +1278,7 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       log_ = new log::Writer(lfile);
       imm_ = mem_;
       has_imm_.Release_Store(imm_);
-      mem_ = new MemTable(internal_comparator_);
+      mem_ = new MemTable(internal_comparator_);//新的sstable文件
       mem_->Ref();
       force = false;   // Do not force another compaction if have room
       MaybeScheduleCompaction();

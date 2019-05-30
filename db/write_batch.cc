@@ -3,8 +3,8 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 //
 // WriteBatch::rep_ :=
-//    sequence: fixed64
-//    count: fixed32
+//    sequence: fixed64   8字节
+//    count: fixed32      4字节
 //    data: record[count]
 // record :=
 //    kTypeValue varstring varstring         |
@@ -12,7 +12,7 @@
 // varstring :=
 //    len: varint32
 //    data: uint8[len]
-
+//上面时writeBatch的格式，writeBatch就是把多条记录打包在一起，组成一条日志记录，一次写入
 #include "leveldb/write_batch.h"
 
 #include "leveldb/db.h"
@@ -24,6 +24,7 @@
 namespace leveldb {
 
 // WriteBatch header has an 8-byte sequence number followed by a 4-byte count.
+//WriteBatch header格式  8个字节的sequence number，后面4个字节为记录个数个数，共12字节
 static const size_t kHeader = 12;
 
 WriteBatch::WriteBatch() {
@@ -44,7 +45,7 @@ Status WriteBatch::Iterate(Handler* handler) const {
   if (input.size() < kHeader) {
     return Status::Corruption("malformed WriteBatch (too small)");
   }
-
+//从WriteBatch中拆包，一条条记录写入
   input.remove_prefix(kHeader);
   Slice key, value;
   int found = 0;
@@ -82,26 +83,29 @@ Status WriteBatch::Iterate(Handler* handler) const {
 int WriteBatchInternal::Count(const WriteBatch* b) {
   return DecodeFixed32(b->rep_.data() + 8);
 }
-
+//从第8个自己开始记录个数
 void WriteBatchInternal::SetCount(WriteBatch* b, int n) {
   EncodeFixed32(&b->rep_[8], n);
 }
 
+//从WriteBatch中解析出sequenceNum
 SequenceNumber WriteBatchInternal::Sequence(const WriteBatch* b) {
   return SequenceNumber(DecodeFixed64(b->rep_.data()));
 }
-
+//设置sequenceNum,从rep开始处encode seqNum,前8个字节记录
 void WriteBatchInternal::SetSequence(WriteBatch* b, SequenceNumber seq) {
   EncodeFixed64(&b->rep_[0], seq);
 }
 
 void WriteBatch::Put(const Slice& key, const Slice& value) {
+//之前的个数+1
   WriteBatchInternal::SetCount(this, WriteBatchInternal::Count(this) + 1);
   rep_.push_back(static_cast<char>(kTypeValue));
   PutLengthPrefixedSlice(&rep_, key);
   PutLengthPrefixedSlice(&rep_, value);
 }
 
+//删除某条记录时，不需要value
 void WriteBatch::Delete(const Slice& key) {
   WriteBatchInternal::SetCount(this, WriteBatchInternal::Count(this) + 1);
   rep_.push_back(static_cast<char>(kTypeDeletion));
